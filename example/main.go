@@ -1,11 +1,9 @@
-
-
 /*
  * @Notice: edit notice here
  * @Author: zhulei
  * @Date: 2022-12-02 20:33:37
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-02 20:40:03
+ * @LastEditTime: 2022-12-02 21:56:38
  */
 package main
 
@@ -17,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zhuleiandy888/nats-conn-pool"
+	pool "github.com/zhuleiandy888/nats-conn-pool"
 )
 
 const addr string = "127.0.0.1:8080"
@@ -45,7 +43,6 @@ func client() {
 	//创建一个连接池： 初始化2，最大连接5，空闲连接数是4
 	poolConfig := &pool.Config{
 		InitialCap: 2,
-		MaxIdle:    4,
 		MaxCap:     5,
 		Factory:    factory,
 		Close:      close,

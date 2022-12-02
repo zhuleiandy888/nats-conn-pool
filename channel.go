@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-02 21:40:04
+ * @LastEditTime: 2022-12-02 22:02:56
  */
 package pool
 
@@ -62,7 +62,7 @@ type channelPool struct {
 
 // NewChannelPool 初始化连接
 func NewChannelPool(poolConfig *Config) (Pool, error) {
-	if poolConfig.InitialCap <= poolConfig.MaxCap || poolConfig.InitialCap < 0 || poolConfig.MaxCap < 0 {
+	if poolConfig.InitialCap > poolConfig.MaxCap || poolConfig.InitialCap < 0 || poolConfig.MaxCap < 0 {
 		return nil, errors.New("invalid capacity settings")
 	}
 	if poolConfig.Factory == nil {
@@ -135,7 +135,7 @@ func (c *channelPool) Get() (interface{}, error) {
 				}
 			}
 			//判断是否失效，失效则丢弃，如果用户没有设定 ping 方法，就不检查
-			if c.ping != nil{
+			if c.ping != nil {
 				if c.Ping(wrapConn.conn) {
 					c.Close(wrapConn.conn)
 					continue
