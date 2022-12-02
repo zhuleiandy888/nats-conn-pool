@@ -1,8 +1,16 @@
+/*
+ * @Notice: edit notice here
+ * @Author: zhulei
+ * @Date: 2022-12-02 20:57:58
+ * @LastEditors: zhulei
+ * @LastEditTime: 2022-12-02 21:24:01
+ */
 package pool
 
 import (
 	"errors"
 	"fmt"
+
 	// log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -43,15 +51,14 @@ type idleConn struct {
 
 // channelPool 存放连接信息
 type channelPool struct {
-	mu                       sync.RWMutex
-	conns                    chan *idleConn
-	factory                  func() (interface{}, error)
-	close                    func(interface{}) error
-	ping                     func(interface{}) error
-	idleTimeout				 time.Duration
-	maxActive                int
+	mu          sync.RWMutex
+	conns       chan *idleConn
+	factory     func() (interface{}, error)
+	close       func(interface{}) error
+	ping        func(interface{}) bool
+	idleTimeout time.Duration
+	maxActive   int
 }
-
 
 // NewChannelPool 初始化连接
 func NewChannelPool(poolConfig *Config) (Pool, error) {
@@ -66,11 +73,11 @@ func NewChannelPool(poolConfig *Config) (Pool, error) {
 	}
 
 	c := &channelPool{
-		conns:        make(chan *idleConn, poolConfig.MaxCap),
-		factory:      poolConfig.Factory,
-		close:        poolConfig.Close,
-		idleTimeout:  poolConfig.IdleTimeout,
-		maxActive:    poolConfig.MaxCap,
+		conns:       make(chan *idleConn, poolConfig.MaxCap),
+		factory:     poolConfig.Factory,
+		close:       poolConfig.Close,
+		idleTimeout: poolConfig.IdleTimeout,
+		maxActive:   poolConfig.MaxCap,
 	}
 
 	if poolConfig.Ping != nil {
