@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-02 21:24:01
+ * @LastEditTime: 2022-12-02 21:40:04
  */
 package pool
 
@@ -35,7 +35,7 @@ type Config struct {
 	//关闭连接的方法
 	Close func(interface{}) error
 	//检查连接是否有效的方法
-	Ping func(interface{}) error
+	Ping func(interface{}) bool
 	//连接最大空闲时间，超过该事件则将失效
 	IdleTimeout time.Duration
 }
@@ -135,8 +135,8 @@ func (c *channelPool) Get() (interface{}, error) {
 				}
 			}
 			//判断是否失效，失效则丢弃，如果用户没有设定 ping 方法，就不检查
-			if c.ping != nil {
-				if err := c.Ping(wrapConn.conn); err != nil {
+			if c.ping != nil{
+				if c.Ping(wrapConn.conn) {
 					c.Close(wrapConn.conn)
 					continue
 				}
@@ -197,9 +197,10 @@ func (c *channelPool) Close(conn interface{}) error {
 }
 
 // Ping 检查单条连接是否有效
-func (c *channelPool) Ping(conn interface{}) error {
+func (c *channelPool) Ping(conn interface{}) bool {
 	if conn == nil {
-		return errors.New("connection is nil. rejecting")
+		// return errors.New("connection is nil. rejecting")
+		return false
 	}
 	return c.ping(conn)
 }
