@@ -151,8 +151,8 @@ func (c *channelPool) Get() (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			// 新建连接入队列，补空缺
-			c.addConn(conn)
+			// 新建连接入队列，补空缺, 使用完重新使用
+			// c.addConn(conn)
 			return conn, nil
 		}
 	}
