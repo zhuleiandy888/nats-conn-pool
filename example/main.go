@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:33:37
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-05 15:21:40
+ * @LastEditTime: 2022-12-05 15:28:23
  */
 package main
 
@@ -73,7 +73,7 @@ func client() {
 
 	ping := func(v interface{}) bool { return v.(*nats.Conn).IsConnected() }
 
-	//创建一个连接池： 初始化30，最大连接40
+	//创建一个连接池： 初始化100，最大连接1000
 	poolConfig := &pool.Config{
 		InitialCap: 100,
 		MaxCap:     1000,
