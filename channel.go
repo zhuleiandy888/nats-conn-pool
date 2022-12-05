@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-05 09:45:14
+ * @LastEditTime: 2022-12-05 11:16:59
  */
 package pool
 
@@ -149,7 +149,8 @@ func (c *channelPool) Get() (interface{}, error) {
 			}
 			conn, err := c.factory()
 			if err != nil {
-				return nil, err
+				// return nil, err
+				continue
 			}
 			return conn, nil
 		}
