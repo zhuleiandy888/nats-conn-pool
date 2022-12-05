@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-05 11:16:59
+ * @LastEditTime: 2022-12-05 16:44:59
  */
 package pool
 
@@ -136,7 +136,7 @@ func (c *channelPool) Get() (interface{}, error) {
 			}
 			//判断是否失效，失效则丢弃，如果用户没有设定 ping 方法，就不检查
 			if c.ping != nil {
-				if c.Ping(wrapConn.conn) {
+				if !c.Ping(wrapConn.conn) {
 					c.Close(wrapConn.conn)
 					continue
 				}
@@ -165,7 +165,7 @@ func (c *channelPool) Put(conn interface{}) error {
 
 	//判断是否失效，失效则丢弃，如果用户没有设定 ping 方法，就不检查
 	if c.ping != nil {
-		if c.Ping(conn) {
+		if !c.Ping(conn) {
 			c.Close(conn)
 			return errors.New("conn not active, close conn")
 		}
