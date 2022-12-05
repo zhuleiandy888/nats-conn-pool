@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-02 22:02:56
+ * @LastEditTime: 2022-12-05 09:45:14
  */
 package pool
 
@@ -105,14 +105,14 @@ func (c *channelPool) getConns() chan *idleConn {
 }
 
 // addConn 添加连接
-func (c *channelPool) addConn(conn interface{}) error {
-	select {
-	case c.conns <- &idleConn{conn: conn, t: time.Now()}: // Put conn in the channel unless it is full
-	default:
-		// fmt.Println("Channel full. Discarding value")
-	}
-	return nil
-}
+// func (c *channelPool) addConn(conn interface{}) error {
+// 	select {
+// 	case c.conns <- &idleConn{conn: conn, t: time.Now()}: // Put conn in the channel unless it is full
+// 	default:
+// 		// fmt.Println("Channel full. Discarding value")
+// 	}
+// 	return nil
+// }
 
 // Get 从pool中取一个连接
 func (c *channelPool) Get() (interface{}, error) {
@@ -151,8 +151,6 @@ func (c *channelPool) Get() (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			// 新建连接入队列，补空缺, 使用完重新使用
-			// c.addConn(conn)
 			return conn, nil
 		}
 	}
@@ -162,6 +160,14 @@ func (c *channelPool) Get() (interface{}, error) {
 func (c *channelPool) Put(conn interface{}) error {
 	if conn == nil {
 		return errors.New("connection is nil. rejecting")
+	}
+
+	//判断是否失效，失效则丢弃，如果用户没有设定 ping 方法，就不检查
+	if c.ping != nil {
+		if c.Ping(conn) {
+			c.Close(conn)
+			return errors.New("conn not active, close conn")
+		}
 	}
 
 	c.mu.Lock()
