@@ -3,7 +3,7 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:33:37
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-05 15:28:23
+ * @LastEditTime: 2022-12-12 14:17:16
  */
 package main
 
@@ -80,6 +80,7 @@ func client() {
 		Factory:    factory,
 		Close:      close,
 		Ping:       ping,
+		FactoryMaxRetry: 3,
 		//连接最大空闲时间，超过该时间的连接 将会关闭，可避免空闲时连接EOF，自动失效的问题
 		IdleTimeout: 600 * time.Second,
 	}

@@ -3,23 +3,22 @@
  * @Author: zhulei
  * @Date: 2022-12-02 20:57:58
  * @LastEditors: zhulei
- * @LastEditTime: 2022-12-05 16:44:59
+ * @LastEditTime: 2022-12-12 14:26:31
  */
 package pool
 
 import (
 	"errors"
 	"fmt"
-
-	// log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 	//"reflect"
 )
 
 var (
-	//ErrMaxActiveConnReached 连接池超限
-	ErrMaxActiveConnReached = errors.New("MaxActiveConnReached")
+
+	//ErrFactoryMaxRetryReached 建立连接次数超限
+	ErrFactoryMaxRetryReached = errors.New("FactoryMaxRetryReached")
 )
 
 // Config 连接池相关配置
@@ -28,8 +27,8 @@ type Config struct {
 	InitialCap int
 	//最大并发存活连接数
 	MaxCap int
-	//最大空闲连接
-	// MaxIdle int
+	// factory方法建立连接最大重试次数, 等于0不限制次数
+	FactoryMaxRetry int
 	//生成连接的方法
 	Factory func() (interface{}, error)
 	//关闭连接的方法
@@ -40,10 +39,6 @@ type Config struct {
 	IdleTimeout time.Duration
 }
 
-// type connReq struct {
-// 	idleConn *idleConn
-// }
-
 type idleConn struct {
 	conn interface{}
 	t    time.Time
@@ -51,18 +46,20 @@ type idleConn struct {
 
 // channelPool 存放连接信息
 type channelPool struct {
-	mu          sync.RWMutex
-	conns       chan *idleConn
-	factory     func() (interface{}, error)
-	close       func(interface{}) error
-	ping        func(interface{}) bool
-	idleTimeout time.Duration
-	maxActive   int
+	mu              sync.RWMutex
+	conns           chan *idleConn
+	factory         func() (interface{}, error)
+	close           func(interface{}) error
+	ping            func(interface{}) bool
+	factoryMaxRetry int
+	idleTimeout     time.Duration
+	maxActive       int
 }
 
 // NewChannelPool 初始化连接
 func NewChannelPool(poolConfig *Config) (Pool, error) {
-	if poolConfig.InitialCap > poolConfig.MaxCap || poolConfig.InitialCap < 0 || poolConfig.MaxCap < 0 {
+
+	if poolConfig.InitialCap > poolConfig.MaxCap || poolConfig.InitialCap <= 0 || poolConfig.MaxCap <= 0 {
 		return nil, errors.New("invalid capacity settings")
 	}
 	if poolConfig.Factory == nil {
@@ -72,12 +69,17 @@ func NewChannelPool(poolConfig *Config) (Pool, error) {
 		return nil, errors.New("invalid close func settings")
 	}
 
+	if poolConfig.FactoryMaxRetry < 0 || poolConfig.IdleTimeout <= 0 {
+		return nil, errors.New("invalid FactoryMaxRetry or IdleTimeout argvs settings")
+	}
+
 	c := &channelPool{
-		conns:       make(chan *idleConn, poolConfig.MaxCap),
-		factory:     poolConfig.Factory,
-		close:       poolConfig.Close,
-		idleTimeout: poolConfig.IdleTimeout,
-		maxActive:   poolConfig.MaxCap,
+		conns:           make(chan *idleConn, poolConfig.MaxCap),
+		factory:         poolConfig.Factory,
+		close:           poolConfig.Close,
+		factoryMaxRetry: poolConfig.FactoryMaxRetry,
+		idleTimeout:     poolConfig.IdleTimeout,
+		maxActive:       poolConfig.MaxCap,
 	}
 
 	if poolConfig.Ping != nil {
@@ -88,7 +90,7 @@ func NewChannelPool(poolConfig *Config) (Pool, error) {
 		conn, err := c.factory()
 		if err != nil {
 			c.Release()
-			return nil, fmt.Errorf("factory is not able to fill the pool: %s", err)
+			return nil, fmt.Errorf("factory() func failed to initialize the connection pool: %s", err)
 		}
 		c.conns <- &idleConn{conn: conn, t: time.Now()}
 	}
@@ -120,6 +122,7 @@ func (c *channelPool) Get() (interface{}, error) {
 	if conns == nil {
 		return nil, ErrClosed
 	}
+	retryCount := 0
 	for {
 		select {
 		case wrapConn := <-conns:
@@ -149,8 +152,12 @@ func (c *channelPool) Get() (interface{}, error) {
 			}
 			conn, err := c.factory()
 			if err != nil {
-				// return nil, err
-				continue
+				retryCount++
+				if c.factoryMaxRetry != 0 && retryCount > c.factoryMaxRetry {
+					return nil, ErrFactoryMaxRetryReached
+				} else {
+					continue
+				}
 			}
 			return conn, nil
 		}
